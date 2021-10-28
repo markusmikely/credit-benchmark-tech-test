@@ -1,32 +1,70 @@
 import React, { useRef, useEffect } from 'react'
+import styled from 'styled-components'
 
 import * as d3 from 'd3'
 import * as moment from 'moment'
 
+const LineChart = styled.div`
+  width: 100vw;
+  height: 500px;
+  position: relative;
+  /* .area {
+    fill: red
+  } */
+  .line {
+    stroke: #545454;
+    fill: none;
+    stroke-width: 2px;
+  }
+  .dot {
+    fill: #545454;
+  }
+  .tooltip {
+    background: white;
+    padding: 10px;
+    border: 1px solid black;
+    border-radius: 3px;
+    position: absolute;
+    text-align: center;
+    h4, p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    h4 {
+      margin-bottom: 5px;
+      font-weight: normal;
+    }
+
+  }
+`
+
+
 const Chart = props => {
   const { data } = props
-  const ref = useRef(null)
+  const svgRef = useRef(null)
+  const divRef = useRef(null)
 
   useEffect(() => {
-    if(data && ref.current) {
+    if(data && svgRef.current) {
       drawChart(data)
     }
   }, [data])
 
   const getDate = date => {
-    console.log('date', date)
     return moment(date).format('MMM YY')
   }
 
   const drawChart = data => {
 
-    var margin = {top: 20, right: 50, bottom: 30, left: 50},
+    var margin = {top: 20, right: 200, bottom: 30, left: 200},
       width = 1400 - margin.left - margin.right,
       height = 500 - margin.top - margin.bottom;
 
+
     // set the ranges
     var x = d3.scaleTime().range([0, width]);
-    var y = d3.scaleLinear().range([height, 0]);
+    var y = d3.scaleLinear().range([height, 0])
 
     // define the area
     var area = d3.area()
@@ -39,14 +77,11 @@ const Chart = props => {
       .x(function(d) { return x(d.date); })
       .y(function(d) { return y(d.value); });
 
-    var div = d3.select("body").append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
-    // append the svg obgect to the body of the page
-    // appends a 'group' element to 'svg'
-    // moves the 'group' element to the top left margin
+    var div = d3.select(divRef.current)
+      .attr("class", "tooltip")
+      .style("opacity", 0);
 
-    var svg = d3.select(ref.current)
+    var svg = d3.select(svgRef.current)
 
     svg.selectAll('*').remove()
 
@@ -58,15 +93,36 @@ const Chart = props => {
       .attr("transform",
       "translate(" + margin.left + "," + margin.top + ")");
 
-
     // scale the range of the data
     x.domain(d3.extent(data, function(d) { return d.date; }));
-    y.domain([0, d3.max(data, function(d) { return d.value; })]);
+    y.domain([0, 100]);
+
+    // Define gradient
+    var defs = container.append("defs")
+      .append("linearGradient")
+      .attr("id", "gradient")
+      .attr("x1", "0%")
+      .attr("y1", "0%")
+      .attr("x2", "0%")
+      .attr("y2", "100%");
+
+    defs.append("stop")
+      .attr("offset", "33%")
+      .attr("style", "stop-color:rgb(223 248 232);stop-opacity:.5");
+
+    defs.append("stop")
+      .attr("offset", "66%")
+      .attr("style", "stop-color:rgb(217 233 253);stop-opacity:.5");
+
+    defs.append("stop")
+      .attr("offset", "100%")
+      .attr("style", "stop-color:rgb(253 221 239);stop-opacity:.5");
 
     // add the area
     container.append("path")
       .data([data])
         .attr("class", "area")
+        .attr("fill", "url(#gradient)")
         .attr("d", area);
 
     // add the valueline path.
@@ -80,30 +136,32 @@ const Chart = props => {
       .attr("transform", "translate(0," + height + ")")
       .call(d3.axisBottom(x).tickFormat((d) => getDate(d)))
 
-
     // add the Y Axis
     container.append("g")
       .call(d3.axisLeft(y));
 
-      svg.selectAll("dot")
-       .data(data)
+    // add the dots with tooltips
+    container.selectAll("dot")
+      .data(data)
      .enter().append("circle")
        .attr("r", 5)
+       .attr("class", "dot")
        .attr("cx", function(d) { return x(d.date); })
        .attr("cy", function(d) { return y(d.value); })
-       .on("mouseover", function(d) {
-         // div.transition()
-         //   .duration(200)
-         //   .style("opacity", .9);
-         // div.html(formatTime(d.date) + "<br/>" + d.value)
-         //   .style("left", "10px")
-         //   .style("top",  "10px");
-         })
-       .on("mouseout", function(d) {
+       .on("mouseover", function(event, d) {
          div.transition()
-           .duration(500)
-           .style("opacity", 0);
-         });
+           .duration(200)
+           .style("opacity", .9);
+         div.html("<h4>Date: <b>"+getDate(d.date) + "</b></h4><p>Value: <b>" + d.value + "</b></p>")
+           .style("left", (event.pageX - 85) + "px")
+           .style("top", (event.pageY - 180) + "px");
+         })
+     .on("mouseout", function(d) {
+       div.transition()
+         .duration(500)
+         .style("opacity", 0);
+       });
+
 
     return() => {
       svg.exit()
@@ -113,11 +171,10 @@ const Chart = props => {
   }
 
   return (
-    <div style={{width:'100vw', height: '500px'}}>
-    <svg ref={ref}>
-
-    </svg>
-    </div>
+    <LineChart>
+      <svg ref={svgRef} />
+      <div ref={divRef} />
+    </LineChart>
   )
 }
 

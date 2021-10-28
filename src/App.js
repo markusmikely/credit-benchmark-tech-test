@@ -47,14 +47,15 @@ function App() {
   return (
     <div className="App">
       <Layout>
-        <h1>Markus' Test</h1>
+        <h1>React D3 Interactive Line Chart Demo</h1>
+        <SwitchButton
+          type={type}
+          change={handleChangeType} />
         <Chart
           type={type}
           data={data}
         />
-        <SwitchButton
-          type={type}
-          change={handleChangeType} />
+
       </Layout>
     </div>
   );
